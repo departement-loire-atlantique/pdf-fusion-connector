@@ -16,7 +16,7 @@ from passerelle.utils.api import endpoint
 from . import utils
 
 base_dir = os.path.dirname(__file__)
-tmp_dir = os.path.join(base_dir, "tmp")
+tmp_dir = "/tmp"
 
 PDF = {
     "type": "object",
