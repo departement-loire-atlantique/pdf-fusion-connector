@@ -4,6 +4,7 @@ import datetime
 import json
 import os
 import requests
+import tempfile
 
 from collections import OrderedDict
 
@@ -16,7 +17,6 @@ from passerelle.utils.api import endpoint
 from . import utils
 
 base_dir = os.path.dirname(__file__)
-tmp_dir = "/tmp"
 
 PDF = {
     "type": "object",
@@ -85,14 +85,13 @@ class FusionPdf(BaseResource):
 
         files_to_merge = []
         for pdf in pdfs_to_merge:
-            file = os.path.join(tmp_dir, pdf.get("filename"))
-            files_to_merge.append(file)
-            with open(file, "wb") as out_file:
-                out_file.write(base64.b64decode(pdf.get("content")))
+            file = tempfile.NamedTemporaryFile(delete=False)
+            files_to_merge.append(file.name)
+            with file as tmp:
+                tmp.write(base64.b64decode(pdf.get("content")))
 
-        out_pdf = os.path.join(tmp_dir, "fusion.pdf")
-        merged_pdf = utils.concat(files_to_merge, out_file=out_pdf)
-        filename = post_data["filename"]
+        out_pdf = tempfile.NamedTemporaryFile()
+        merged_pdf = utils.concat(files_to_merge, out_file=out_pdf.name)
 
         for file in files_to_merge:
             os.remove(file)
@@ -100,8 +99,10 @@ class FusionPdf(BaseResource):
         with open(merged_pdf, "rb") as open_file:
             byte_content = open_file.read()
         base64_bytes = base64.b64encode(byte_content)
+        
         os.remove(merged_pdf)
 
+        filename = post_data["filename"]
         file_payload = {}
         file_payload["file"] = {
             "content_type": "application/pdf",
